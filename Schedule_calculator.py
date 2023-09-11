@@ -79,7 +79,6 @@ previous_day_doctors = []
 current_date = start_date
 round_robin_index_open = 0
 round_robin_index_closed = 0
-call_type = 1  # Initialize call type (0 for open, 1 for closed)
 
 # Generate the schedule
 for day in range(num_days):
