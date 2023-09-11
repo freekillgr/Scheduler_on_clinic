@@ -8,6 +8,31 @@ def read_csv_file(file_path):
     except FileNotFoundError:
         print(f"Error: {file_path} not found.")
         exit(1)
+    except pd.errors.EmptyDataError:
+        print(f"Error: {file_path} is empty.")
+        exit(1)
+    except pd.errors.ParserError:
+        print(f"Error: Could not parse {file_path}.")
+        exit(1)
+
+# Ask the user for input
+start_date_input = input("Enter the start date (YYYY-MM-DD): ")
+end_date_input = input("Enter the end date (YYYY-MM-DD): ")
+call_type_input = input("Enter the call type to start with (0 for open, 1 for closed): ")
+
+# Validate user input
+try:
+    start_date = datetime.strptime(start_date_input, '%Y-%m-%d').date()
+    end_date = datetime.strptime(end_date_input, '%Y-%m-%d').date()
+except ValueError:
+    print("Invalid date format. Please use YYYY-MM-DD.")
+    exit(1)
+
+if call_type_input not in ['0', '1']:
+    print("Invalid call type. Please enter 0 for open or 1 for closed.")
+    exit(1)
+
+call_type = int(call_type_input)
 
 # Define the schedule file path
 schedule_file_path = 'clinic_schedule.csv'
@@ -20,9 +45,7 @@ if os.path.exists(schedule_file_path):
 data = read_csv_file('doctor_data.csv')
 wishes = read_csv_file('doctor_wishes.csv')
 
-# Define the start and end date for scheduling
-start_date = datetime.strptime('2023-09-01', '%Y-%m-%d').date()
-end_date = datetime.strptime('2023-09-30', '%Y-%m-%d').date()
+# Define the start and end date for scheduling (now based on user input)
 delta = end_date - start_date
 num_days = delta.days + 1
 
@@ -130,4 +153,11 @@ weekend_counters_df.to_csv('weekend_counters.csv', index=False)
 for date, doctors in schedule.items():
     print(f"{date}: {', '.join(doctors)}")
 
-print("Monthly counter
+print("Monthly counters for each doctor:")
+for doctor, count in monthly_counters.items():
+    print(f"{doctor}: {count} days")
+
+print("Weekend counters for each doctor:")
+for doctor, count in weekend_counters.items():
+    print(f"{doctor}: {count} weekends")
+
