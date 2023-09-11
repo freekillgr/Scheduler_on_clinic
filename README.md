@@ -1,165 +1,48 @@
-# Scheduler_on_clinic
-A scheduler for doctors with factor like wish list or status .
-     ach doctor's status (either available for all types of calls or only for closed calls)
-    Each doctor's preferences ("wishes") for specific dates they'd prefer not to work
-    A round-robin assignment to ensure all doctors are scheduled fairly
-    A maximum number of days a doctor can be scheduled in a month
+The code is designed to create a schedule for doctors, based on their availability and other constraints. It generates this schedule over a user-specified date range, considering doctors' wishes for unavailable dates and also balancing the frequency of work among doctors.
+Helper Functions:
 
-The code also generates a CSV file that saves the final schedule and another that stores the number of days each doctor worked.
+    read_csv_file(file_path): This function reads a given CSV file and returns it as a pandas DataFrame. It also handles some errors like file not found, empty file, and parsing error.
 
-Here are some key points about each part of the script:
+    get_unavailable_dates(row): Given a row of data, this function returns a list of dates when a doctor is unavailable. The row is expected to have columns 'Wish_Start_Date' and 'Wish_End_Date' to specify the range of dates.
 
-    Reading CSV Files: The function read_csv_file() reads a given CSV file into a DataFrame, handling various types of errors like "File not found", "Empty file", and "Parse error".
+User Inputs:
 
-    Initializations:
-        schedule_file_path is the output file for the generated schedule.
-        data and wishes DataFrames store the information read from doctor_data.csv and doctor_wishes.csv, respectively.
-        The date range for the schedule is defined.
-        Doctor names, counters, and other variables are initialized.
+    The user is asked to input several parameters like the start date, end date, call type (open or closed), and the paths for doctor data and wishes CSV files. The code validates these inputs for correct formats and existence.
 
-    Wishes Conversion: The wishes DataFrame is converted to a dictionary (doctor_wishes_dict) to make it easier to check against while generating the schedule.
+Initial Setup:
 
-    Generate Schedule: This is the core logic, where the schedule is generated based on the rules.
-        It uses a round-robin index for both open and closed calls.
-        The round-robin index ensures that each doctor is picked sequentially from the list of available doctors.
-        The selected doctors are added to the schedule and their counters are updated.
+    Several dictionaries are initialized for keeping track of doctor counters, monthly counters, and weekend counters. They are:
+        doctor_counters: Keeps track of how many times a doctor has been assigned for the current month.
+        monthly_counters: Same as above but for longer-term.
+        weekend_counters: Counts how many weekends a doctor has worked.
+        last_weekend_worked: Keeps track of the last weekend a doctor worked.
 
-    Saving and Displaying Results: Finally, the generated schedule and the monthly counters are saved to CSV files, and some of this information is printed to the console.
+    Other variables initialized include:
+        schedule: A dictionary to store the final schedule.
+        previous_day_doctors: A list to store doctors who worked on the previous day to avoid assigning them again immediately.
 
-Guide to Using the Doctor Scheduling Script
-Overview
+Main Scheduling Loop:
 
-The Doctor Scheduling Script is designed to create a month-long schedule for doctors working in a clinic. The script takes into account several parameters such as each doctor's availability, the type of call (open or closed), and any specific days the doctors wish to have off. The schedule is generated in a fair manner using a round-robin algorithm.
-Input Data Requirements
+    For each day in the specified range (current_date from start_date to end_date):
 
-You'll need two CSV files:
+        Check if it is a weekend.
 
-    doctor_data.csv: This file should have two columns:
-        Doctor_Name: The names of the doctors.
-        Status: Indicates whether a doctor is available for all calls (a) or just closed calls (n).
+        Identify how many doctors are needed based on the call_type.
 
-Doctor_Name,Status
-Alice,a
-Bob,n
-Carol,a
+        Create a list of available doctors based on various conditions including:
+            Not having worked the previous day (previous_day_doctors).
+            Not having a wish to be unavailable on the current_date.
+            If it's a closed call, the doctor must have a 'n' status (Status column from data DataFrame).
 
-doctor_wishes.csv: This file should also have two columns:
+        If it's a weekend, also remove doctors who worked the last weekend.
 
-    Doctor_Name: The names of the doctors (should match the names in doctor_data.csv).
-    Wish_Date: Dates that doctors wish to have off, formatted as YYYY-MM-DD.
+        If enough available doctors are found, they are selected in a round-robin manner. If not, the doctors with the least number of assignments are chosen.
 
-Doctor_Name,Wish_Date
-Alice,2023-09-10
-Bob,2023-09-15
-Carol,2023-09-20
+        Update all the counters (doctor_counters, monthly_counters, weekend_counters) and the last_weekend_worked dictionary.
 
-How to Run the Script
+        Store the selected doctors for the current_date in the schedule dictionary.
 
-    Place the doctor_data.csv and doctor_wishes.csv files in the same directory as the script.
+Final Output:
 
-    Run the script by executing it in a Python environment where the required libraries (pandas, os, datetime) are installed.
-
-    After running the script, you will find a new file named clinic_schedule.csv generated in the same directory. This file contains the schedule for the month.
-
-    You will also find a file named monthly_counters.csv which indicates how many days each doctor has been scheduled for.
-
-Output Data
-clinic_schedule.csv
-
-    Date: The date for which the schedule has been generated, formatted as YYYY-MM-DD.
-    Doctors: A list of doctor names who are scheduled for that day.
-
-Date,Doctors
-2023-09-01,"['Alice', 'Carol']"
-2023-09-02,"['Bob']"
-...
-
-monthly_counters.csv
-
-    Doctor_Name: The name of the doctor.
-    Days_Worked: The number of days the doctor is scheduled for the month.
-
-Doctor_Name,Days_Worked
-Alice,10
-Bob,9
-Carol,10
-
-Guide to Using the Doctor Scheduling Script
-Overview
-
-The Doctor Scheduling Script is designed to create a month-long schedule for doctors working in a clinic. The script takes into account several parameters such as each doctor's availability, the type of call (open or closed), and any specific days the doctors wish to have off. The schedule is generated in a fair manner using a round-robin algorithm.
-Input Data Requirements
-
-You'll need two CSV files:
-
-    doctor_data.csv: This file should have two columns:
-        Doctor_Name: The names of the doctors.
-        Status: Indicates whether a doctor is available for all calls (a) or just closed calls (n).
-
-    Example:
-
-    css
-
-Doctor_Name,Status
-Alice,a
-Bob,n
-Carol,a
-
-doctor_wishes.csv: This file should also have two columns:
-
-    Doctor_Name: The names of the doctors (should match the names in doctor_data.csv).
-    Wish_Date: Dates that doctors wish to have off, formatted as YYYY-MM-DD.
-
-Example:
-
-    Doctor_Name,Wish_Date
-    Alice,2023-09-10
-    Bob,2023-09-15
-    Carol,2023-09-20
-
-How to Run the Script
-
-    Place the doctor_data.csv and doctor_wishes.csv files in the same directory as the script.
-
-    Run the script by executing it in a Python environment where the required libraries (pandas, os, datetime) are installed.
-
-    After running the script, you will find a new file named clinic_schedule.csv generated in the same directory. This file contains the schedule for the month.
-
-    You will also find a file named monthly_counters.csv which indicates how many days each doctor has been scheduled for.
-
-Output Data
-clinic_schedule.csv
-
-    Date: The date for which the schedule has been generated, formatted as YYYY-MM-DD.
-    Doctors: A list of doctor names who are scheduled for that day.
-
-Example:
-
-css
-
-Date,Doctors
-2023-09-01,"['Alice', 'Carol']"
-2023-09-02,"['Bob']"
-...
-
-monthly_counters.csv
-
-    Doctor_Name: The name of the doctor.
-    Days_Worked: The number of days the doctor is scheduled for the month.
-
-Example:
-
-Doctor_Name,Days_Worked
-Alice,10
-Bob,9
-Carol,10
-
-Notes
-
-    The script uses a round-robin algorithm to distribute the workdays as evenly as possible among the doctors.
-
-    Doctors will not be scheduled for two consecutive days to ensure they have time to rest.
-
-    Doctors' wishes for days off are respected as much as possible.
-
-That's it! Now you should have a fair and balanced schedule for your clinic.
+    The schedule, monthly_counters, and weekend_counters are saved to CSV files.
+    These same values are also printed to the console for immediate viewing.
