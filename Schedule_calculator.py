@@ -15,12 +15,21 @@ def read_csv_file(file_path):
         print(f"Error: Could not parse {file_path}.")
         exit(1)
 
+def get_unavailable_dates(row):
+    start_date = datetime.strptime(row['Wish_Start_Date'], '%Y-%m-%d').date()
+    end_date = datetime.strptime(row['Wish_End_Date'], '%Y-%m-%d').date()
+    delta = end_date - start_date
+    return [start_date + timedelta(days=i) for i in range(delta.days + 1)]
+
 # Ask the user for input
 start_date_input = input("Enter the start date (YYYY-MM-DD): ")
 end_date_input = input("Enter the end date (YYYY-MM-DD): ")
 call_type_input = input("Enter the call type to start with (0 for open, 1 for closed): ")
+doctor_data_file_path = input("Enter the location of the doctor_data.csv file: ")
+doctor_wishes_file_path = input("Enter the location of the doctor_wishes.csv file: ")
+output_directory = input("Enter the directory where you want to save the output files: ")
 
-# Validate user input
+# Validate user input and directory
 try:
     start_date = datetime.strptime(start_date_input, '%Y-%m-%d').date()
     end_date = datetime.strptime(end_date_input, '%Y-%m-%d').date()
@@ -32,18 +41,27 @@ if call_type_input not in ['0', '1']:
     print("Invalid call type. Please enter 0 for open or 1 for closed.")
     exit(1)
 
+if not os.path.exists(output_directory):
+    os.makedirs(output_directory)
+
 call_type = int(call_type_input)
-
-# Define the schedule file path
-schedule_file_path = 'clinic_schedule.csv'
-
-# Check if the schedule file already exists and delete it if it does
-if os.path.exists(schedule_file_path):
-    os.remove(schedule_file_path)
+schedule_file_path = os.path.join(output_directory, 'schedule.csv')
+monthly_counter_file_path = os.path.join(output_directory, 'monthly_counters.csv')
+weekend_counter_file_path = os.path.join(output_directory, 'weekend_counters.csv')
 
 # Read the CSV files
-data = read_csv_file('doctor_data.csv')
-wishes = read_csv_file('doctor_wishes.csv')
+data = read_csv_file(doctor_data_file_path)
+wishes = read_csv_file(doctor_wishes_file_path)
+
+# Convert wishes to a dictionary of datetime objects
+doctor_wishes_dict = {}
+for index, row in wishes.iterrows():
+    doc = row['Doctor_Name']
+    unavailable_dates = get_unavailable_dates(row)
+    if doc in doctor_wishes_dict:
+        doctor_wishes_dict[doc].extend(unavailable_dates)
+    else:
+        doctor_wishes_dict[doc] = unavailable_dates
 
 # Define the start and end date for scheduling (now based on user input)
 delta = end_date - start_date
@@ -62,16 +80,6 @@ current_date = start_date
 round_robin_index_open = 0
 round_robin_index_closed = 0
 call_type = 1  # Initialize call type (0 for open, 1 for closed)
-
-# Convert wishes to a dictionary of datetime objects
-doctor_wishes_dict = {}
-for index, row in wishes.iterrows():
-    doc = row['Doctor_Name']
-    date = datetime.strptime(row['Wish_Date'], '%Y-%m-%d').date()
-    if doc in doctor_wishes_dict:
-        doctor_wishes_dict[doc].append(date)
-    else:
-        doctor_wishes_dict[doc] = [date]
 
 # Generate the schedule
 for day in range(num_days):
@@ -143,11 +151,11 @@ schedule_df = pd.DataFrame(list(schedule.items()), columns=['Date', 'Doctors'])
 schedule_df.to_csv(schedule_file_path, index=False)
 
 monthly_counters_df = pd.DataFrame(list(monthly_counters.items()), columns=['Doctor_Name', 'Days_Worked'])
-monthly_counters_df.to_csv('monthly_counters.csv', index=False)
+monthly_counters_df.to_csv(monthly_counter_file_path, index=False)
 
 # Save weekend counters to a CSV
 weekend_counters_df = pd.DataFrame(list(weekend_counters.items()), columns=['Doctor_Name', 'Weekends_Worked'])
-weekend_counters_df.to_csv('weekend_counters.csv', index=False)
+weekend_counters_df.to_csv(weekend_counter_file_path, index=False)
 
 # Display the schedule, monthly counters, and weekend counters
 for date, doctors in schedule.items():
@@ -160,4 +168,3 @@ for doctor, count in monthly_counters.items():
 print("Weekend counters for each doctor:")
 for doctor, count in weekend_counters.items():
     print(f"{doctor}: {count} weekends")
-
